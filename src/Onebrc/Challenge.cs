@@ -27,22 +27,20 @@ public static class Challenge
         }
     }
 
-    private static void AddMeasureInDictionary(IEnumerable<TownMeasurement> measurements, Dictionary<string, (double min, double max, double summ, int count)> dictionary)
+    private static void AddMeasure(Dictionary<string, (double min, double max, double summ, int count)> dictionary,
+        (string Town, double Measurement) measurement)
     {
-        foreach (var measurement in measurements)
+        if (dictionary.TryGetValue(measurement.Town, out var value))
         {
-            if (dictionary.TryGetValue(measurement.Town, out var value))
-            {
-                value.min = Math.Min(value.min, measurement.Measurement);
-                value.max = Math.Max(value.max, measurement.Measurement);
-                value.summ += measurement.Measurement;
-                value.count++;
-            }
-            else
-            {
-                dictionary[measurement.Town] = (measurement.Measurement, measurement.Measurement,
-                    measurement.Measurement, 1);
-            }
+            value.min = Math.Min(value.min, measurement.Measurement);
+            value.max = Math.Max(value.max, measurement.Measurement);
+            value.summ += measurement.Measurement;
+            value.count++;
+        }
+        else
+        {
+            dictionary[measurement.Town] = (measurement.Measurement, measurement.Measurement,
+                measurement.Measurement, 1);
         }
     }
 
@@ -52,18 +50,17 @@ public static class Challenge
         using (var reader = File.OpenRead(CreateMeasurements.InputFileName))
         {
             int index = 0,
-                batchSize = 4096;
+                batchSize = 4096 * 128;
             var buffer = new byte[batchSize];
 
             while (await reader.ReadAsync(buffer, index, batchSize - index) != 0)
             {
-                var row = ParseBatch(buffer);
-                AddMeasureInDictionary(row.measurements, dictionary);
-                if (row.bytesRead != batchSize)
+                var bytesRead = ParseBatch(buffer, dictionary);
+                if (bytesRead != batchSize)
                 {
-                    Array.Copy(buffer, row.bytesRead, buffer, 0, batchSize - row.bytesRead);
-                    Array.Clear(buffer, batchSize - row.bytesRead, row.bytesRead);
-                    index = batchSize - row.bytesRead;
+                    Array.Copy(buffer, bytesRead, buffer, 0, batchSize - bytesRead);
+                    Array.Clear(buffer, batchSize - bytesRead, bytesRead);
+                    index = batchSize - bytesRead;
                 }
                 else
                 {
@@ -75,32 +72,30 @@ public static class Challenge
         return dictionary;
     }
 
-    public static (IEnumerable<TownMeasurement> measurements, int bytesRead) ParseBatch(byte[] batch)
+    public static int ParseBatch(byte[] batch, Dictionary<string, (double min, double max, double summ, int count)> valueTuples)
     {
-        int index = 0;
         int lastNewLineIndex = 0;
-        var measurements = new LinkedList<TownMeasurement>();
-        
+
         for (int i = 0; i < batch.Length; i++)
         {
             if (batch[i] == 0x0A)
             {
                 var townMeasurement = ParseRow(new Span<byte>(batch, lastNewLineIndex, i - lastNewLineIndex));
-                measurements.AddLast(townMeasurement);
+                AddMeasure(valueTuples, townMeasurement);
                 lastNewLineIndex = i + 1;
             }
         }
-        return (measurements, lastNewLineIndex);
+        return lastNewLineIndex;
     }
 
     public record TownMeasurement(string Town, double Measurement);
     
-    public static TownMeasurement ParseRow(Span<byte> span)
+    public static (string, double) ParseRow(Span<byte> span)
     {
         var separatorIndex = span.IndexOf((byte) 0x3B);
         var town = Encoding.UTF8.GetString(span.Slice(0, separatorIndex));
         var measure = ParseDoubleFromBytes(span.Slice(separatorIndex + 1, span.Length - separatorIndex - 1));
-        return new TownMeasurement(town, measure);
+        return new ValueTuple<string, double>(town, measure);
     }
 
     private static double ParseDoubleFromBytes(Span<byte> span)

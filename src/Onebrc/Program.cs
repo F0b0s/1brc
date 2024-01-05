@@ -34,7 +34,7 @@ else if (args[0] == "challenge")
 {
     var stopwatch = Stopwatch.StartNew();
     await Challenge.Do();
-    Console.WriteLine($"Challenged in {stopwatch}.");
+    Console.WriteLine($"Challenged in {stopwatch}. Memory consumption is: {GC.GetTotalMemory(false)}");
 }
 else
 {
