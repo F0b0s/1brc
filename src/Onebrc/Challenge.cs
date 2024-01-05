@@ -28,19 +28,18 @@ public static class Challenge
     }
 
     private static void AddMeasure(Dictionary<string, (double min, double max, double summ, int count)> dictionary,
-        (string Town, double Measurement) measurement)
+        string Town, double Measurement)
     {
-        if (dictionary.TryGetValue(measurement.Town, out var value))
+        if (dictionary.TryGetValue(Town, out var value))
         {
-            value.min = Math.Min(value.min, measurement.Measurement);
-            value.max = Math.Max(value.max, measurement.Measurement);
-            value.summ += measurement.Measurement;
+            value.min = Math.Min(value.min, Measurement);
+            value.max = Math.Max(value.max, Measurement);
+            value.summ += Measurement;
             value.count++;
         }
         else
         {
-            dictionary[measurement.Town] = (measurement.Measurement, measurement.Measurement,
-                measurement.Measurement, 1);
+            dictionary[Town] = (Measurement, Measurement, Measurement, 1);
         }
     }
 
@@ -80,25 +79,24 @@ public static class Challenge
         {
             if (batch[i] == 0x0A)
             {
-                var townMeasurement = ParseRow(new Span<byte>(batch, lastNewLineIndex, i - lastNewLineIndex));
-                AddMeasure(valueTuples, townMeasurement);
+                ParseRow(batch, lastNewLineIndex, i - lastNewLineIndex, valueTuples);
+
                 lastNewLineIndex = i + 1;
             }
         }
         return lastNewLineIndex;
     }
-
-    public record TownMeasurement(string Town, double Measurement);
     
-    public static (string, double) ParseRow(Span<byte> span)
+    public static void ParseRow(byte[] batch, int startIndex, int count,
+        Dictionary<string, (double min, double max, double summ, int count)> valueTuples)
     {
-        var separatorIndex = span.IndexOf((byte) 0x3B);
-        var town = Encoding.UTF8.GetString(span.Slice(0, separatorIndex));
-        var measure = ParseDoubleFromBytes(span.Slice(separatorIndex + 1, span.Length - separatorIndex - 1));
-        return new ValueTuple<string, double>(town, measure);
+        var separatorIndexArray = Array.IndexOf(batch,(byte) 0x3B, startIndex);
+        var town = Encoding.UTF8.GetString(batch, startIndex, separatorIndexArray - startIndex);
+        var measure = ParseDoubleFromBytes(batch, separatorIndexArray + 1, count - (separatorIndexArray - startIndex) - 1); // 4 sec
+        AddMeasure(valueTuples, town, measure);
     }
 
-    private static double ParseDoubleFromBytes(Span<byte> span)
+    private static double ParseDoubleFromBytes(byte[] batch, int startIndex, int count)
     {
         double result = 0;
         int index = 0;
@@ -106,23 +104,25 @@ public static class Challenge
         bool positive = true;
         bool sign = true;
         
-        while (index < span.Length)
+        while (index < count)
         {
-            if (span[index] == 0x2D)
-                sign = false;
-            
-            if (span[index] != 0x2E)
+            var b = batch[startIndex + index];
+            if (b == 0x2D)
             {
-                if(positive)
-                    result = result * 10 + (span[index] - 0x30);
+                sign = false;
+            }
+            else if (b != 0x2E)
+            {
+                if (positive)
+                {
+                    result = result * 10 + (b - 0x30);
+                }
                 else
                 {
-                    result += negativeScale * (span[index] - 0x30);
+                    result += negativeScale * (b - 0x30);
                     negativeScale /= 10;
                 }
-            }
-
-            if (span[index] == 0x2E)
+            } else
             {
                 positive = false;
             }
