@@ -32,8 +32,12 @@ public static class Challenge
     {
         if (dictionary.TryGetValue(Town, out var value))
         {
-            value.min = Math.Min(value.min, Measurement);
-            value.max = Math.Max(value.max, Measurement);
+            if (Measurement < value.min)
+                value.min = Measurement;
+
+            if (Measurement > value.max)
+                value.max = Measurement;
+            
             value.summ += Measurement;
             value.count++;
         }
@@ -91,8 +95,8 @@ public static class Challenge
         Dictionary<string, (double min, double max, double summ, int count)> valueTuples)
     {
         var separatorIndexArray = Array.IndexOf(batch,(byte) 0x3B, startIndex);
-        var town = Encoding.UTF8.GetString(batch, startIndex, separatorIndexArray - startIndex);
-        var measure = ParseDoubleFromBytes(batch, separatorIndexArray + 1, count - (separatorIndexArray - startIndex) - 1); // 4 sec
+        var town = Encoding.UTF8.GetString(batch, startIndex, separatorIndexArray - startIndex); // 0.6 sec
+        var measure = ParseDoubleFromBytes(batch, separatorIndexArray + 1, count - (separatorIndexArray - startIndex) - 1); // 0.2 sec
         AddMeasure(valueTuples, town, measure);
     }
 
