@@ -8,17 +8,21 @@ public static class Challenge
     public static async Task Do()
     {
         var measurements = await GetMeasurements();
-        var dictionary = new SortedDictionary<string, List<double>>();
+        var dictionary = new SortedDictionary<string, (double min, double max, double summ, int count)>();
         
         foreach (var measurement in measurements)
         {
-            if (dictionary.ContainsKey(measurement.Town))
+            if (dictionary.TryGetValue(measurement.Town, out var value))
             {
-                dictionary[measurement.Town].Add(measurement.Measurement);
+                value.min = Math.Min(value.min, measurement.Measurement);
+                value.max = Math.Max(value.max, measurement.Measurement);
+                value.summ += measurement.Measurement;
+                value.count++;
             }
             else
             {
-                dictionary[measurement.Town] = new List<double>() {measurement.Measurement};
+                dictionary[measurement.Town] = (measurement.Measurement, measurement.Measurement,
+                    measurement.Measurement, 1);
             }
         }
 
@@ -28,9 +32,9 @@ public static class Challenge
             
             foreach (var pair in dictionary)
             {
-                var min = Math.Round(pair.Value.Min(), 1).ToString(CultureInfo.InvariantCulture);
-                var max = Math.Round(pair.Value.Max(), 1).ToString(CultureInfo.InvariantCulture);
-                var mean = Math.Round(pair.Value.Sum() / pair.Value.Count, 1).ToString(CultureInfo.InvariantCulture);
+                var min = Math.Round(pair.Value.min, 1).ToString(CultureInfo.InvariantCulture);
+                var max = Math.Round(pair.Value.max, 1).ToString(CultureInfo.InvariantCulture);
+                var mean = Math.Round(pair.Value.summ / pair.Value.count, 1).ToString(CultureInfo.InvariantCulture);
                 
                 await outFile.WriteAsync(Encoding.UTF8.GetBytes($"{pair.Key}={min}/{mean}/{max}, "));
             }
