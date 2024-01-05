@@ -1,0 +1,10 @@
+Luanda;26.7
+Phoenix;23.7
+Ho Chi Minh City;27.6
+Thiès;23.4
+Kunming;18.6
+Istanbul;14.3
+Salt Lake City;4.6
+Fianarantsoa;10.9
+Toliara;25.1
+Dodoma;16.2

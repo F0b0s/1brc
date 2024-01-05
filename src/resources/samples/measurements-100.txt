@@ -1,0 +1,100 @@
+Asmara;18
+Tucson;21.1
+Jos;23.7
+Benghazi;15.1
+Zürich;4.8
+Tabriz;17.6
+St. John's;11.6
+Barcelona;13.2
+Alexandria;19.7
+Ghanzi;19.5
+Thessaloniki;10.4
+Mango;24.4
+El Paso;12.1
+Hamburg;12.1
+Dushanbe;15.6
+Kumasi;27.5
+Saskatoon;7
+Brazzaville;26.4
+San Diego;19.4
+Colombo;29.7
+Dhaka;20.6
+Los Angeles;24.2
+Cotonou;24.1
+Wau;33.3
+Erbil;14.9
+Anchorage;4
+Melbourne;20.8
+Alexandria;20.4
+Bamako;26.1
+Antsiranana;22.7
+Mahajanga;21.3
+Mombasa;25.8
+Guatemala City;26.3
+Yakutsk;-4.7
+Frankfurt;5.9
+Sapporo;10.6
+Conakry;21.4
+Port Vila;23
+Ankara;6
+Port Sudan;23.5
+Sydney;20.3
+Kunming;15.3
+Suva;30.9
+Managua;29.5
+Sochi;12
+Atlanta;15.9
+Port Sudan;22
+Skopje;13.6
+Da Lat;11.1
+Erzurum;4
+Melbourne;16.4
+Ifrane;11
+Ouahigouya;29.7
+Hat Yai;31.5
+Hong Kong;17.5
+Luanda;28.9
+Guangzhou;28.6
+Pyongyang;12.8
+Nassau;19.3
+Fresno;14.5
+Lake Havasu City;17.3
+Tirana;18
+Alexandria;26.7
+Naha;18.1
+Gangtok;21.9
+Gangtok;14.6
+Maun;28.3
+Mek'ele;29.3
+Podgorica;14.5
+Wichita;18.5
+Medan;23.7
+Harbin;6.9
+Lusaka;25.8
+Wrocław;12.8
+Havana;20.4
+Darwin;28.4
+Tamale;31
+Indianapolis;6.8
+Maputo;17
+Boston;16.6
+Chișinău;12.5
+City of San Marino;12.7
+Budapest;6.2
+Cairo;17.9
+Las Palmas de Gran Canaria;26.5
+Jos;27.5
+Kunming;19
+Beijing;14.8
+Sydney;15.6
+Ghanzi;22.9
+Vienna;14.2
+Willemstad;33.1
+Thessaloniki;13.3
+Douala;32.2
+Lagos;20.6
+Blantyre;23.3
+New Delhi;24.8
+Surabaya;32.7
+Warsaw;11.2
+Yinchuan;9
