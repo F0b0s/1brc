@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 
@@ -85,29 +84,59 @@ public static class Challenge
         {
             if (batch[i] == 0x0A)
             {
-                //var stopWatch = Stopwatch.StartNew();
                 var townMeasurement = ParseRow(new Span<byte>(batch, lastNewLineIndex, i - lastNewLineIndex));
                 measurements.Add(townMeasurement);
                 lastNewLineIndex = i + 1;
-                
-                //Console.WriteLine(stopWatch.ElapsedTicks);
             }
         }
-
         return (measurements, lastNewLineIndex);
     }
 
     public record TownMeasurement(string Town, double Measurement);
-
+    
     public static TownMeasurement ParseRow(Span<byte> span)
     {
         var separatorIndex = span.IndexOf((byte) 0x3B);
-
         var town = Encoding.UTF8.GetString(span.Slice(0, separatorIndex));
-        var measure = Double.Parse(
-            Encoding.UTF8.GetString(span.Slice(separatorIndex + 1, span.Length - separatorIndex - 1)),
-            CultureInfo.InvariantCulture
-            );
+        var measure = ParseDoubleFromBytes(span.Slice(separatorIndex + 1, span.Length - separatorIndex - 1));
         return new TownMeasurement(town, measure);
+    }
+
+    private static double ParseDoubleFromBytes(Span<byte> span)
+    {
+        double result = 0;
+        int index = 0;
+        double negativeScale = 0.1;
+        bool positive = true;
+        bool sign = true;
+        
+        while (index < span.Length)
+        {
+            if (span[index] == 0x2D)
+                sign = false;
+            
+            if (span[index] != 0x2E)
+            {
+                if(positive)
+                    result = result * 10 + (span[index] - 0x30);
+                else
+                {
+                    result += negativeScale * (span[index] - 0x30);
+                    negativeScale /= 10;
+                }
+            }
+
+            if (span[index] == 0x2E)
+            {
+                positive = false;
+            }
+
+            index++;
+        }
+
+        if (!sign)
+            result = -result;
+
+        return result;
     }
 }
