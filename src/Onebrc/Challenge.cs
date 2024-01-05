@@ -7,24 +7,7 @@ public static class Challenge
 {
     public static async Task Do()
     {
-        var measurements = await GetMeasurements();
-        var dictionary = new Dictionary<string, (double min, double max, double summ, int count)>();
-
-        foreach (var measurement in measurements)
-        {
-            if (dictionary.TryGetValue(measurement.Town, out var value))
-            {
-                value.min = Math.Min(value.min, measurement.Measurement);
-                value.max = Math.Max(value.max, measurement.Measurement);
-                value.summ += measurement.Measurement;
-                value.count++;
-            }
-            else
-            {
-                dictionary[measurement.Town] = (measurement.Measurement, measurement.Measurement,
-                    measurement.Measurement, 1);
-            }
-        }
+        var dictionary = await GetMeasurements();
 
         using (var outFile = File.Create(CreateMeasurements.OutputFileName))
         {
@@ -44,10 +27,28 @@ public static class Challenge
         }
     }
 
-    public static async Task<IEnumerable<TownMeasurement>> GetMeasurements()
+    private static void AddMeasureInDictionary(IEnumerable<TownMeasurement> measurements, Dictionary<string, (double min, double max, double summ, int count)> dictionary)
     {
-        var measurements = new List<TownMeasurement>();
-        
+        foreach (var measurement in measurements)
+        {
+            if (dictionary.TryGetValue(measurement.Town, out var value))
+            {
+                value.min = Math.Min(value.min, measurement.Measurement);
+                value.max = Math.Max(value.max, measurement.Measurement);
+                value.summ += measurement.Measurement;
+                value.count++;
+            }
+            else
+            {
+                dictionary[measurement.Town] = (measurement.Measurement, measurement.Measurement,
+                    measurement.Measurement, 1);
+            }
+        }
+    }
+
+    public static async Task<Dictionary<string, (double min, double max, double summ, int count)>> GetMeasurements()
+    {
+        var dictionary = new Dictionary<string, (double min, double max, double summ, int count)>();
         using (var reader = File.OpenRead(CreateMeasurements.InputFileName))
         {
             int index = 0,
@@ -57,7 +58,7 @@ public static class Challenge
             while (await reader.ReadAsync(buffer, index, batchSize - index) != 0)
             {
                 var row = ParseBatch(buffer);
-                measurements.AddRange(row.measurements);
+                AddMeasureInDictionary(row.measurements, dictionary);
                 if (row.bytesRead != batchSize)
                 {
                     Array.Copy(buffer, row.bytesRead, buffer, 0, batchSize - row.bytesRead);
@@ -71,21 +72,21 @@ public static class Challenge
             }
         }
 
-        return measurements;
+        return dictionary;
     }
 
     public static (IEnumerable<TownMeasurement> measurements, int bytesRead) ParseBatch(byte[] batch)
     {
         int index = 0;
         int lastNewLineIndex = 0;
-        var measurements = new List<TownMeasurement>(100);
+        var measurements = new LinkedList<TownMeasurement>();
         
         for (int i = 0; i < batch.Length; i++)
         {
             if (batch[i] == 0x0A)
             {
                 var townMeasurement = ParseRow(new Span<byte>(batch, lastNewLineIndex, i - lastNewLineIndex));
-                measurements.Add(townMeasurement);
+                measurements.AddLast(townMeasurement);
                 lastNewLineIndex = i + 1;
             }
         }
