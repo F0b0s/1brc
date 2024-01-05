@@ -1,6 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 
+using System.Diagnostics;
 using Onebrc;
 
 if (args.Length < 1)
@@ -28,6 +29,12 @@ if (args[0] == "generate")
     }
 
     await CreateMeasurements.Generate(size);
+}
+else if (args[0] == "challenge")
+{
+    var stopwatch = Stopwatch.StartNew();
+    await Challenge.Do();
+    Console.WriteLine($"Challenged in {stopwatch}.");
 }
 else
 {

@@ -5,7 +5,8 @@ namespace Onebrc;
 
 public static class CreateMeasurements
 {
-    private const string FileName = "./measurements.txt";
+    public const string InputFileName = "./measurements.txt";
+    public const string OutputFileName = "./measurements-out.txt";
 
     private record WeatherStation(string Id, double MeanTemperature)
     {
@@ -469,7 +470,7 @@ public static class CreateMeasurements
         };
 
         var random = new Random();
-        using (var writer = File.AppendText(FileName))
+        using (var writer = File.AppendText(InputFileName))
         {
             for (int i = 0; i < size; i++) {
                 if (i > 0 && i % 50_000_000 == 0) {
