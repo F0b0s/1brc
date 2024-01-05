@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 
@@ -8,8 +9,8 @@ public static class Challenge
     public static async Task Do()
     {
         var measurements = await GetMeasurements();
-        var dictionary = new SortedDictionary<string, (double min, double max, double summ, int count)>();
-        
+        var dictionary = new Dictionary<string, (double min, double max, double summ, int count)>();
+
         foreach (var measurement in measurements)
         {
             if (dictionary.TryGetValue(measurement.Town, out var value))
@@ -30,13 +31,14 @@ public static class Challenge
         {
             await outFile.WriteAsync(Encoding.UTF8.GetBytes("{"));
             
-            foreach (var pair in dictionary)
+            foreach (var town in dictionary.Keys.OrderBy(x => x).ToArray())
             {
-                var min = Math.Round(pair.Value.min, 1).ToString(CultureInfo.InvariantCulture);
-                var max = Math.Round(pair.Value.max, 1).ToString(CultureInfo.InvariantCulture);
-                var mean = Math.Round(pair.Value.summ / pair.Value.count, 1).ToString(CultureInfo.InvariantCulture);
+                var pair = dictionary[town];
+                var min = Math.Round(pair.min, 1).ToString(CultureInfo.InvariantCulture);
+                var max = Math.Round(pair.max, 1).ToString(CultureInfo.InvariantCulture);
+                var mean = Math.Round(pair.summ / pair.count, 1).ToString(CultureInfo.InvariantCulture);
                 
-                await outFile.WriteAsync(Encoding.UTF8.GetBytes($"{pair.Key}={min}/{mean}/{max}, "));
+                await outFile.WriteAsync(Encoding.UTF8.GetBytes($"{town}={min}/{mean}/{max}, "));
             }
             
             await outFile.WriteAsync(Encoding.UTF8.GetBytes("}"));
@@ -77,15 +79,18 @@ public static class Challenge
     {
         int index = 0;
         int lastNewLineIndex = 0;
-        var measurements = new List<TownMeasurement>();
+        var measurements = new List<TownMeasurement>(100);
         
         for (int i = 0; i < batch.Length; i++)
         {
             if (batch[i] == 0x0A)
             {
+                //var stopWatch = Stopwatch.StartNew();
                 var townMeasurement = ParseRow(new Span<byte>(batch, lastNewLineIndex, i - lastNewLineIndex));
                 measurements.Add(townMeasurement);
                 lastNewLineIndex = i + 1;
+                
+                //Console.WriteLine(stopWatch.ElapsedTicks);
             }
         }
 
