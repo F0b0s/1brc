@@ -478,7 +478,7 @@ public static class CreateMeasurements
                 }
                 var station = stations[random.Next(stations.Length)];
                 await writer.WriteAsync(station.Id);
-                await writer.WriteAsync(";" + station.GetMeasurement().ToString(CultureInfo.InvariantCulture));
+                await writer.WriteAsync(";" + station.GetMeasurement().ToString("0.0", CultureInfo.InvariantCulture));
                 await writer.WriteLineAsync();
             }
         }
