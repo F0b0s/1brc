@@ -12,10 +12,11 @@ to generate `measurements.txt` with 100 measurements
 
 to process measurements.txt in bin directory
 
-# Current standings
+## Results
 macOS Monterey 12.5.1 16GB
 Apple M1 2.40GHz, 1 CPU, 8 logical and 8 physical cores
 .NET SDK=8.0.100
 
-10M - 23 sec
-
+| # | Result (m:s.ms) |    Date   |
+|---|-----------------|-----------|
+| 1.|        01:43.999| 06.01.2024|
