@@ -5,6 +5,14 @@ namespace Onebrc;
 
 public static class Challenge
 {
+    public class Town
+    {
+        public double Min;
+        public double Max;
+        public double Sum;
+        public int Count;
+    }
+    
     public static async Task Do()
     {
         var dictionary = await GetMeasurements();
@@ -16,9 +24,9 @@ public static class Challenge
             foreach (var town in dictionary.Keys.OrderBy(x => x).ToArray())
             {
                 var pair = dictionary[town];
-                var min = Math.Round(pair.min, 1).ToString(CultureInfo.InvariantCulture);
-                var max = Math.Round(pair.max, 1).ToString(CultureInfo.InvariantCulture);
-                var mean = Math.Round(pair.summ / pair.count, 1).ToString(CultureInfo.InvariantCulture);
+                var min = Math.Round(pair.Min, 1).ToString(CultureInfo.InvariantCulture);
+                var max = Math.Round(pair.Max, 1).ToString(CultureInfo.InvariantCulture);
+                var mean = Math.Round(pair.Sum / pair.Count, 1).ToString(CultureInfo.InvariantCulture);
                 
                 await outFile.WriteAsync(Encoding.UTF8.GetBytes($"{town}={min}/{mean}/{max}, "));
             }
@@ -27,30 +35,33 @@ public static class Challenge
         }
     }
 
-    private static void AddMeasure(Dictionary<string, (double min, double max, double summ, int count)> dictionary,
+    private static void AddMeasure(Dictionary<string, Town> dictionary,
         string Town, double Measurement)
     {
         if (dictionary.TryGetValue(Town, out var value))
         {
-            if (Measurement < value.min)
-                value.min = Measurement;
+            if (Measurement < value.Min)
+                value.Min = Measurement;
 
-            if (Measurement > value.max)
-                value.max = Measurement;
+            if (Measurement > value.Max)
+                value.Max = Measurement;
             
-            value.summ += Measurement;
-            value.count++;
+            value.Sum += Measurement;
+            value.Count++;
             dictionary[Town] = value;
         }
         else
         {
-            dictionary[Town] = (Measurement, Measurement, Measurement, 1);
+            var town = new Town();
+            town.Min = town.Max = town.Sum = Measurement;
+            town.Count = 1;
+            dictionary[Town] = town;
         }
     }
 
-    public static async Task<Dictionary<string, (double min, double max, double summ, int count)>> GetMeasurements()
+    public static async Task<Dictionary<string, Town>> GetMeasurements()
     {
-        var dictionary = new Dictionary<string, (double min, double max, double summ, int count)>();
+        var dictionary = new Dictionary<string, Town>();
         using (var reader = File.OpenRead(CreateMeasurements.InputFileName))
         {
             int index = 0,
@@ -76,7 +87,7 @@ public static class Challenge
         return dictionary;
     }
 
-    public static int ParseBatch(byte[] batch, Dictionary<string, (double min, double max, double summ, int count)> valueTuples)
+    public static int ParseBatch(byte[] batch, Dictionary<string, Town> valueTuples)
     {
         int lastNewLineIndex = 0;
         
@@ -94,7 +105,7 @@ public static class Challenge
     }
     
     public static void ParseRow(byte[] batch, int startIndex,
-        Dictionary<string, (double min, double max, double summ, int count)> valueTuples)
+        Dictionary<string, Town> valueTuples)
     {
         var separatorIndexArray = Array.IndexOf(batch,(byte) 0x3B, startIndex); 
         var town = Encoding.UTF8.GetString(batch, startIndex, separatorIndexArray - startIndex);
