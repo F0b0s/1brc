@@ -78,65 +78,57 @@ public static class Challenge
     public static int ParseBatch(byte[] batch, Dictionary<string, (double min, double max, double summ, int count)> valueTuples)
     {
         int lastNewLineIndex = 0;
-
-        for (int i = 0; i < batch.Length; i++)
+        
+        while (lastNewLineIndex < batch.Length)
         {
-            if (batch[i] == 0x0A)
-            {
-                ParseRow(batch, lastNewLineIndex, i - lastNewLineIndex, valueTuples);
-
-                lastNewLineIndex = i + 1;
-            }
+            var index = Array.IndexOf(batch, (byte)0x0A, lastNewLineIndex);
+            if (index == -1)
+                return lastNewLineIndex + 1;
+            
+            ParseRow(batch, lastNewLineIndex, valueTuples);
+            lastNewLineIndex = index + 1;
         }
+        
         return lastNewLineIndex;
     }
     
-    public static void ParseRow(byte[] batch, int startIndex, int count,
+    public static void ParseRow(byte[] batch, int startIndex,
         Dictionary<string, (double min, double max, double summ, int count)> valueTuples)
     {
-        var separatorIndexArray = Array.IndexOf(batch,(byte) 0x3B, startIndex);
-        var town = Encoding.UTF8.GetString(batch, startIndex, separatorIndexArray - startIndex); // 0.6 sec
-        var measure = ParseDoubleFromBytes(batch, separatorIndexArray + 1, count - (separatorIndexArray - startIndex) - 1); // 0.2 sec
+        var separatorIndexArray = Array.IndexOf(batch,(byte) 0x3B, startIndex); 
+        var town = Encoding.UTF8.GetString(batch, startIndex, separatorIndexArray - startIndex);
+        var measure = ParseDoubleFromBytes(batch, separatorIndexArray + 1);
         AddMeasure(valueTuples, town, measure);
     }
 
-    private static double ParseDoubleFromBytes(byte[] batch, int startIndex, int count)
+    public static double ParseDoubleFromBytes(byte[] batch, int startIndex)
     {
-        double result = 0;
-        int index = 0;
-        double negativeScale = 0.1;
-        bool positive = true;
-        bool sign = true;
-        
-        while (index < count)
+        int pointIndex = Array.IndexOf(batch,(byte) 0x2E, startIndex);
+        if (batch[startIndex] == 0x2D)
         {
-            var b = batch[startIndex + index];
-            if (b == 0x2D)
+            if (pointIndex - startIndex > 2)
             {
-                sign = false;
+                // negative 11.1
+                return  ((batch[pointIndex - 2] - 0x30) * 10 + (batch[pointIndex - 1] - 0x30) + (batch[pointIndex + 1] - 0x30) * 0.1) * -1;
             }
-            else if (b != 0x2E)
+            else
             {
-                if (positive)
-                {
-                    result = result * 10 + (b - 0x30);
-                }
-                else
-                {
-                    result += negativeScale * (b - 0x30);
-                    negativeScale /= 10;
-                }
-            } else
-            {
-                positive = false;
+                // negative 1.1
+                return  ((batch[pointIndex - 1] - 0x30) + (batch[pointIndex + 1] - 0x30) * 0.1) * -1;
             }
-
-            index++;
         }
-
-        if (!sign)
-            result = -result;
-
-        return result;
+        else
+        {
+            if (pointIndex - startIndex > 1)
+            {
+                // positive 11.1
+                return  (batch[pointIndex - 2] - 0x30) * 10 + (batch[pointIndex - 1] - 0x30) + (batch[pointIndex + 1] - 0x30) * 0.1;
+            }
+            else
+            {
+                // positive 1.1
+                return  (batch[pointIndex - 1] - 0x30) + (batch[pointIndex + 1] - 0x30) * 0.1;
+            }
+        }
     }
 }
