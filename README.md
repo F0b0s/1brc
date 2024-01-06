@@ -8,7 +8,7 @@ Run
 
 to generate `measurements.txt` with 100 measurements
 
-`challenge`
+`onebrc challenge`
 
 to process measurements.txt in bin directory
 
