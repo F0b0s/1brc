@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 
@@ -15,7 +17,12 @@ public static class Challenge
     
     public static async Task Do()
     {
-        var dictionary = await GetMeasurements();
+        var stopWatch = Stopwatch.StartNew();
+        var consumers = StartConsumers();   
+        await GetMeasurements();
+        await Task.WhenAll(consumers);
+
+        var dictionary = Aggregate(consumers.Select(x => x.Result).ToList());
 
         using (var outFile = File.Create(CreateMeasurements.OutputFileName))
         {
@@ -59,37 +66,43 @@ public static class Challenge
         }
     }
 
-    public static async Task<Dictionary<string, Town>> GetMeasurements()
+    public static async Task GetMeasurements()
     {
-        var dictionary = new Dictionary<string, Town>();
         using (var reader = File.OpenRead(CreateMeasurements.InputFileName))
         {
             int index = 0,
-                batchSize = 4096 * 128;
+                batchSize = 8192;
             var buffer = new byte[batchSize];
 
             while (await reader.ReadAsync(buffer, index, batchSize - index) != 0)
             {
-                var bytesRead = ParseBatch(buffer, dictionary);
+                var bytesRead = ParseBatch(buffer);
+                var temp = new byte[batchSize];
+                
                 if (bytesRead != batchSize)
                 {
-                    Array.Copy(buffer, bytesRead, buffer, 0, batchSize - bytesRead);
-                    Array.Clear(buffer, batchSize - bytesRead, bytesRead);
+                    Array.Copy(buffer, bytesRead, temp, 0, batchSize - bytesRead);
                     index = batchSize - bytesRead;
                 }
                 else
                 {
                     index = 0;
                 }
+
+                buffer = temp;
             }
         }
 
-        return dictionary;
+        _piecesOfWorks.CompleteAdding();
     }
 
-    public static int ParseBatch(byte[] batch, Dictionary<string, Town> valueTuples)
+    public record PieceOfWork(byte[] array, int startIndex);
+    public static BlockingCollection<List<PieceOfWork>> _piecesOfWorks = new BlockingCollection<List<PieceOfWork>>(new ConcurrentBag<List<PieceOfWork>>());
+    
+    public static int ParseBatch(byte[] batch)
     {
         int lastNewLineIndex = 0;
+        var list = new List<PieceOfWork>(400);
         
         while (lastNewLineIndex < batch.Length)
         {
@@ -97,10 +110,11 @@ public static class Challenge
             if (index == -1)
                 return lastNewLineIndex;
             
-            ParseRow(batch, lastNewLineIndex, valueTuples);
+            list.Add(new PieceOfWork(batch, lastNewLineIndex));
             lastNewLineIndex = index + 1;
         }
         
+        _piecesOfWorks.Add(list);
         return lastNewLineIndex;
     }
     
@@ -142,5 +156,69 @@ public static class Challenge
                 return  (batch[pointIndex - 1] - 0x30) + (batch[pointIndex + 1] - 0x30) * 0.1;
             }
         }
+    }
+
+    public static Dictionary<string, Town> Consumer()
+    {
+        var dictionary = new Dictionary<string, Town>();
+        
+        while (!_piecesOfWorks.IsCompleted)
+        {
+
+            List<PieceOfWork> data = null;
+            try
+            {
+                data = _piecesOfWorks.Take();
+            }
+            catch (InvalidOperationException) { }
+
+            if (data != null)
+            {
+                foreach (var pieceOfWork in data)
+                {
+                    ParseRow(pieceOfWork.array, pieceOfWork.startIndex, dictionary);                    
+                }
+            }
+        }
+
+        return dictionary;
+    }
+
+    public static List<Task<Dictionary<string, Town>>> StartConsumers()
+    {
+        var tasks = new List<Task<Dictionary<string, Town>>>();
+
+        for (int i = 0; i < Environment.ProcessorCount - 2; i++)
+        {
+            var task = Task.Run(Consumer);
+            tasks.Add(task);
+        }
+
+        return tasks;
+    }
+
+    public static Dictionary<string, Town> Aggregate(List<Dictionary<string, Town>> dictionaries)
+    {
+        var result = dictionaries.First();
+
+        for (int i = 1; i < dictionaries.Count; i++)
+        {
+            foreach (var key in result.Keys)
+            {
+                var resultValue = result[key];
+                var anotherValue = dictionaries[i][key];
+
+                if (resultValue.Min > anotherValue.Min)
+                    resultValue.Min = anotherValue.Min;
+                
+                if (resultValue.Max < anotherValue.Max)
+                    resultValue.Max = anotherValue.Max;
+
+                resultValue.Sum += anotherValue.Sum;
+                resultValue.Count += anotherValue.Count;
+            }
+        }
+
+        return result;
     }
 }
