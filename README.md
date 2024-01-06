@@ -17,7 +17,8 @@ macOS Monterey 12.5.1 16GB
 Apple M1 2.40GHz, 1 CPU, 8 logical and 8 physical cores
 .NET SDK=8.0.100
 
-| # | Result (m:s.ms) |    Date   |
-|---|-----------------|-----------|
-| 1.|        01:43.999| 06.01.2024|
-| 2.|        00:31.000| 06.01.2024|
+| # | Result (m:s.ms) |    Date   |  Details     |
+|---|-----------------|-----------|---------------
+| 1.|        01:43.999| 06.01.2024| Single threaded implementation, file is read by chunnks from disk |
+| 2.|        00:31.000| 06.01.2024| File is read by chunnks from disk, parsing done with parallelisation |
+
