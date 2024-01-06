@@ -40,6 +40,7 @@ public static class Challenge
             
             value.summ += Measurement;
             value.count++;
+            dictionary[Town] = value;
         }
         else
         {
@@ -83,7 +84,7 @@ public static class Challenge
         {
             var index = Array.IndexOf(batch, (byte)0x0A, lastNewLineIndex);
             if (index == -1)
-                return lastNewLineIndex + 1;
+                return lastNewLineIndex;
             
             ParseRow(batch, lastNewLineIndex, valueTuples);
             lastNewLineIndex = index + 1;
