@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO.MemoryMappedFiles;
 using System.Text;
+using Microsoft.Win32.SafeHandles;
 
 namespace Onebrc;
 
@@ -19,9 +21,15 @@ public static class Challenge
     {
         var stopWatch = Stopwatch.StartNew();
         var consumers = StartConsumers();   
-        await GetMeasurements();
+        //await GetMeasurements(0, new System.IO.FileInfo(CreateMeasurements.InputFileName).Length);
+        var readers = StartReaders();
+        await Task.WhenAll(readers);
+        
+        _piecesOfWorks.CompleteAdding();
+        
         await Task.WhenAll(consumers);
-
+        Console.WriteLine("Done parsing: " + DateTime.UtcNow);
+        
         var dictionary = Aggregate(consumers.Select(x => x.Result).ToList());
 
         using (var outFile = File.Create(CreateMeasurements.OutputFileName))
@@ -66,16 +74,21 @@ public static class Challenge
         }
     }
 
-    public static async Task GetMeasurements()
+    public static async Task GetMeasurements(long startIndex, long count)
     {
         using (var reader = File.OpenRead(CreateMeasurements.InputFileName))
         {
             int index = 0,
                 batchSize = 8192;
             var buffer = new byte[batchSize];
-
-            while (await reader.ReadAsync(buffer, index, batchSize - index) != 0)
+            reader.Seek(startIndex, SeekOrigin.Begin);
+            while (count >= 0)
             {
+                var read = await reader.ReadAsync(buffer, index, batchSize - index);
+                if (read == 0)
+                    break;
+                count -= read;
+                
                 var bytesRead = ParseBatch(buffer);
                 var temp = new byte[batchSize];
                 
@@ -92,12 +105,11 @@ public static class Challenge
                 buffer = temp;
             }
         }
-
-        _piecesOfWorks.CompleteAdding();
     }
 
     public record PieceOfWork(byte[] array, int startIndex);
-    public static BlockingCollection<List<PieceOfWork>> _piecesOfWorks = new BlockingCollection<List<PieceOfWork>>(new ConcurrentBag<List<PieceOfWork>>());
+    public static BlockingCollection<List<PieceOfWork>> _piecesOfWorks = 
+        new BlockingCollection<List<PieceOfWork>>(new ConcurrentBag<List<PieceOfWork>>());
     
     public static int ParseBatch(byte[] batch)
     {
@@ -114,6 +126,7 @@ public static class Challenge
             lastNewLineIndex = index + 1;
         }
         
+        //Console.WriteLine("Batch size: " + _piecesOfWorks.Count);
         _piecesOfWorks.Add(list);
         return lastNewLineIndex;
     }
@@ -184,6 +197,27 @@ public static class Challenge
         return dictionary;
     }
 
+    public static List<Task> StartReaders()
+    {
+        var fileSize = new System.IO.FileInfo(CreateMeasurements.InputFileName).Length;
+        var middle = fileSize / 3;
+        long index = 0;
+        using (var reader = File.OpenRead(CreateMeasurements.InputFileName))
+        {
+            
+            reader.Seek(middle, SeekOrigin.Begin);
+            var buffer = new byte[1024];
+            var _ = reader.Read(buffer, 0, 1024);
+
+            index = Array.IndexOf(buffer, (byte)0x0A);
+        }
+
+        var task1 = Task.Run(() => GetMeasurements(0, middle + index - 1));
+        var task2 = Task.Run(() => GetMeasurements(middle + index + 1, fileSize - (middle - 1)));
+
+        return new List<Task>() {task1, task2};
+    }
+    
     public static List<Task<Dictionary<string, Town>>> StartConsumers()
     {
         var tasks = new List<Task<Dictionary<string, Town>>>();
